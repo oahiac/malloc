@@ -1,0 +1,24 @@
+FF:
+small: 
+data_segment_size = 74656, data_segment_free_space = 187808
+Execution Time = 6.497826 seconds
+Fragmentation  = 0.602488
+large: 
+Execution Time = 41.729999 seconds
+Fragmentation  = 0.836830
+equal: 
+Execution Time = 18.434734 seconds
+Fragmentation  = 0.999889
+
+BF:
+small: 
+data_segment_size = 10880, data_segment_free_space = 65792
+Execution Time = 1.597473 seconds
+Fragmentation  = 0.834630
+large: 
+Execution Time = 49.475888 seconds
+Fragmentation  = 0.912994
+equal: 
+Execution Time = 18.540785 seconds
+Fragmentation  = 0.999889
+
