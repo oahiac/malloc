@@ -1,3 +1,6 @@
+/* This library contains functions to malloc and free
+ * in both first fit logic and best fit logic.
+ */
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,33 +8,12 @@
 #include <assert.h>
 #include "my_malloc.h"
 
-void * bds = NULL;
+void * bds = NULL; /* base data segment */
 
-void
-check_memory() {
-  void * iter = bds;
-  while (iter != sbrk(0)) {
-    printf("(pos: %d, size: %d, is_free: %d)->", iter-bds, ((block*)iter)->size+BLOCK_INFO_SIZE, ((block*)iter)->is_free);
-    iter += ((block*)iter)->size + BLOCK_INFO_SIZE;
-  }
-  printf("\n\n");
-}
-
-void
-check_free() {
-  block * iter = bds;
-  while (iter) {
-    void * i = (void*)iter;
-    printf("free: (pos: %d, size: %d, is_free: %d)->", i-bds, iter->size, iter->is_free);
-    iter = iter->next;
-  }
-  printf("\n\n");
-}
-
-
-
-
-
+/* To judge if the prev block and next block is adjacent
+ * Return 1 if adjacent
+ * Return 0 if not
+ */
 int
 is_adjacent(
     const block * prev,
@@ -45,19 +27,19 @@ is_adjacent(
   else return 0; 
 }
 
+/* To merge the three adjacent free blocks */
 void
 merge(
     block * curr,
     block * prev,
     block * next) {
-
-  
   if (
       prev != (block*)bds &&
       next != NULL &&
       is_adjacent(prev, curr) &&
       is_adjacent(curr, next)
      ) {
+    /* merge three block */
     prev->size += 2*BLOCK_INFO_SIZE + curr->size + next->size;
     prev->is_free = 1;
     prev->next = next->next;
@@ -69,6 +51,7 @@ merge(
       prev != (block*)bds &&
       is_adjacent(prev, curr)
       ) {
+    /* merge prev and curr */
     prev->size += BLOCK_INFO_SIZE + curr->size;
     prev->is_free = 1;
     prev->next = next;
@@ -81,6 +64,7 @@ merge(
       next != NULL &&
       is_adjacent(curr, next)
       ) {
+    /* merge curr and next */
     curr->size += BLOCK_INFO_SIZE + next->size;
   curr->is_free = 1;
   curr->prev = prev;
@@ -90,21 +74,16 @@ merge(
  
   }
   else {
+    /* do not merge */
     curr->is_free = 1;
     curr->prev = prev;
     curr->next = next;
     prev->next = curr;
     if (next) next->prev = curr;
   }
-  /*
-  curr->is_free = 1;
-  curr->prev = prev;
-  curr->next = next;
-  prev->next = curr;
-  if (next) next->prev = curr;
-*/
 }
 
+/* To create the initial head block */
 void
 initialize_heap() {
   bds = sbrk(BLOCK_INFO_SIZE);
@@ -115,6 +94,7 @@ initialize_heap() {
   head->next = NULL;
 }
 
+/* To split the block and set the second part as free */
 void
 split_block(
     block * curr,
@@ -124,7 +104,7 @@ split_block(
   assert(curr->is_free);
   assert(curr->size >= size);
 
-
+  /* no need to split, just change flag */
   if (curr->size >= size && 
       curr->size <= size + BLOCK_INFO_SIZE) {
     curr->is_free = 0;
@@ -134,6 +114,7 @@ split_block(
     }
   }
   else {
+    /* split the block */
     void * start_ptr = (void*) curr;
     block * new_block = (block*)(start_ptr + BLOCK_INFO_SIZE + size);
     block * prev = curr->prev;
@@ -155,6 +136,10 @@ split_block(
 
 }
 
+/* extend the top of the heap 
+ * Return the address of the new allocated memory is success
+ * Return NULL if fail
+ */
 void *
 extend_heap(size_t size) {
   void * extend_res = sbrk(BLOCK_INFO_SIZE + size);
@@ -169,7 +154,8 @@ extend_heap(size_t size) {
   return (extend_res + BLOCK_INFO_SIZE);
 }
 
-
+/* To iterate through the free block linked list to find the block and change the flag
+ */
 void
 my_free(void * ptr) {
   if (ptr == NULL) return;
@@ -183,19 +169,14 @@ my_free(void * ptr) {
     else if (iter == iter->next) break;
     else iter = iter->next;
   }
-  //printf("%d, %d, %d\n", ((void*)iter)-bds, ptr-bds, ((void*)(iter->next))-bds);
   assert(iter != NULL);
   assert(iter <= curr && (iter->next > curr || iter->next == NULL));
   assert(iter->is_free);
-  //check_memory();
-  //check_free();
   if (iter->next) assert(iter->next->is_free);
   merge(curr, iter, iter->next);
-  //check_memory();
-  //check_free();
-
 }
 
+/* To find the first fit block to allocate */
 void *
 ff_malloc(size_t size) {
   if (bds == NULL) initialize_heap();
@@ -213,6 +194,7 @@ ff_malloc(size_t size) {
   }
 }
 
+/* To find the best fit block to allocate */
 void *
 bf_malloc(size_t size) {
   if (bds == NULL) initialize_heap();
@@ -236,7 +218,6 @@ bf_malloc(size_t size) {
     return extend_heap(size);
   }
   else {
-    //printf("best: %d\n", (void*)best - bds);
     split_block(best, size);
     return best+1;
   }
