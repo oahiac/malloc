@@ -40,8 +40,5 @@ void bf_free(void* ptr);
 unsigned long get_largest_free_data_segment_size();
 unsigned long get_total_free_size();
 
-void check_memory();
-void check_free();
-
 
 #endif
